@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pickup Queue Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <div class="app">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Queue Manager</p>
+          <h1>Run the queue from one secure manager view.</h1>
+          <p class="subhead">
+            Sign in as a manager to select the next group, move players, and
+            keep the public queue updated for everyone.
+          </p>
+        </div>
+        <div class="stats">
+          <div class="stat-card">
+            <span class="stat-label">Players In Queue</span>
+            <span id="stat-queue" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Courts Running</span>
+            <span id="stat-courts" class="stat-value">1</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Last Play</span>
+            <span id="stat-last-play" class="stat-value">0</span>
+          </div>
+        </div>
+      </header>
+
+      <section id="manager-login" class="panel auth-card">
+        <div class="panel-header">
+          <h2>Manager Login</h2>
+          <span id="manager-status" class="badge">Sign in with a manager account.</span>
+        </div>
+        <p id="script-warning" class="warning">
+          The app has not started yet. If you opened this file directly, use
+          `Start App.bat` or publish the `docs` folder so Firebase login can run.
+        </p>
+        <p id="manager-notice" class="muted"></p>
+        <div class="auth-tabs" role="tablist" aria-label="Manager account options">
+          <button id="manager-signin-tab" class="tab active" type="button">Sign In</button>
+          <button id="manager-create-tab" class="tab" type="button">Create Manager</button>
+        </div>
+        <p id="manager-mode-help" class="muted"></p>
+        <div class="field-stack">
+          <input id="manager-name" type="text" placeholder="Manager name" autocomplete="name" />
+          <input id="manager-email" type="email" placeholder="Email" autocomplete="email" />
+          <input
+            id="manager-password"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+          />
+          <button id="manager-submit-btn" class="primary">Sign In</button>
+        </div>
+      </section>
+
+      <main id="manager-app" class="main-layout hidden">
+        <aside class="control-stack">
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Manager</h2>
+              <button id="manager-signout-btn" class="ghost compact hidden">Sign Out</button>
+            </div>
+            <div class="control-row">
+              <a class="ghost link-button" href="player.html">Open Player View</a>
+              <button id="display-btn" class="ghost">Open Display</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Add Players</h2>
+              <div class="toggle-group">
+                <label class="radio">
+                  <input type="radio" name="add-mode" value="first_in" checked />
+                  First In
+                </label>
+                <label class="radio">
+                  <input type="radio" name="add-mode" value="after_sitting" />
+                  After Sitting
+                </label>
+              </div>
+            </div>
+            <div class="add-row">
+              <input
+                id="player-input"
+                type="text"
+                placeholder="Enter names, comma-separated"
+                autocomplete="off"
+              />
+              <button id="add-btn" class="primary" data-lockable="true">Add</button>
+              <button id="clear-btn" class="ghost" data-lockable="true">
+                Clear Queue
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <h2>Game Controls</h2>
+              <div class="toggle-group">
+                <label class="radio">
+                  <input type="radio" name="courts" value="1" checked />
+                  1 Court
+                </label>
+                <label class="radio">
+                  <input type="radio" name="courts" value="2" />
+                  2 Courts
+                </label>
+              </div>
+            </div>
+            <div class="control-row">
+              <button id="select-next-btn" class="primary">Select Next 10/20</button>
+              <button id="play-btn" class="accent">Play</button>
+              <button id="undo-btn" class="ghost">Undo Play</button>
+              <button id="export-btn" class="ghost">Export JSON</button>
+              <label class="ghost file-btn">
+                Import JSON
+                <input id="import-input" type="file" accept="application/json" />
+              </label>
+            </div>
+          </section>
+
+          <section class="panel lock-panel">
+            <div>
+              <h2>Lock Controls</h2>
+              <p>
+                Use the lock to stop accidental edits during games. Default code is
+                6600.
+              </p>
+            </div>
+            <div class="lock-actions">
+              <button id="unlock-btn" class="ghost">Unlock</button>
+              <button id="lock-btn" class="danger">Lock</button>
+            </div>
+          </section>
+        </aside>
+
+        <section class="queue-dashboard">
+          <div class="panel">
+            <div class="panel-header">
+              <h2>I'm Here List</h2>
+              <span id="arrivals-count" class="badge">0 here</span>
+            </div>
+            <ul id="arrivals-list" class="list" aria-label="Players who are here"></ul>
+            <div class="queue-actions arrivals-actions">
+              <button id="add-arrivals-btn" class="primary" data-lockable="true">
+                Add Selected To Queue
+              </button>
+              <button id="remove-arrivals-btn" class="ghost" data-lockable="true">
+                Remove Selected
+              </button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2>Current Queue</h2>
+              <div class="queue-actions">
+                <button id="clear-selection-btn" class="ghost" data-lockable="true">
+                  Clear Selection
+                </button>
+                <button id="remove-btn" class="ghost" data-lockable="true">
+                  Remove Selected
+                </button>
+                <button id="rename-btn" class="ghost" data-lockable="true">
+                  Rename
+                </button>
+              </div>
+            </div>
+            <ul id="queue-list" class="list" aria-label="Queue list"></ul>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <h2>On Courts (Last Play)</h2>
+              <button id="swap-btn" class="ghost">Swap Selected</button>
+            </div>
+            <div class="courts">
+              <div>
+                <h3>Court 1</h3>
+                <ul id="court1-list" class="list" aria-label="Court 1"></ul>
+              </div>
+              <div>
+                <h3>Court 2</h3>
+                <ul id="court2-list" class="list" aria-label="Court 2"></ul>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,270 @@
+import {
+  createAccount,
+  defaultState,
+  getStoreMode,
+  initStore,
+  normalizeState,
+  onAuthChange,
+  onStateChange,
+  saveState,
+  signIn,
+  signOutUser,
+} from "./queue-store.js";
+
+let state = defaultState();
+let currentUser = null;
+let authMode = "signin";
+
+const loginPanel = document.getElementById("player-login");
+const playerPanel = document.getElementById("player-panel");
+const playerStats = document.getElementById("player-stats");
+const publicQueuePanel = document.getElementById("public-queue-panel");
+const publicCourtsPanel = document.getElementById("public-courts-panel");
+const storeStatus = document.getElementById("player-store-status");
+const modeHelp = document.getElementById("player-mode-help");
+const playerName = document.getElementById("player-name");
+const playerEmail = document.getElementById("player-email");
+const playerPassword = document.getElementById("player-password");
+const submitBtn = document.getElementById("player-submit-btn");
+const signinTab = document.getElementById("player-signin-tab");
+const createTab = document.getElementById("player-create-tab");
+const greeting = document.getElementById("player-greeting");
+const statusText = document.getElementById("player-status");
+const imHereBtn = document.getElementById("im-here-btn");
+const leaveBtn = document.getElementById("leave-queue-btn");
+const queueList = document.getElementById("public-queue-list");
+const court1List = document.getElementById("public-court1-list");
+const court2List = document.getElementById("public-court2-list");
+const statQueue = document.getElementById("player-stat-queue");
+const statCourts = document.getElementById("player-stat-courts");
+const statSpot = document.getElementById("player-stat-spot");
+
+signinTab.addEventListener("click", () => setAuthMode("signin"));
+createTab.addEventListener("click", () => setAuthMode("create"));
+submitBtn.addEventListener("click", handleSubmit);
+document.getElementById("player-signout-btn").addEventListener("click", signOutUser);
+imHereBtn.addEventListener("click", markHere);
+leaveBtn.addEventListener("click", leaveQueue);
+playerPassword.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    handleSubmit();
+  }
+});
+
+document.getElementById("script-warning")?.classList.add("hidden");
+
+try {
+  await initStore();
+  setAuthMode(authMode);
+  storeStatus.textContent =
+    getStoreMode() === "firebase" ? "Live queue" : "Setup mode";
+  onAuthChange((user) => {
+    currentUser = user;
+    render();
+  });
+  onStateChange((nextState) => {
+    state = normalizeState(nextState);
+    render();
+  });
+} catch (err) {
+  storeStatus.textContent = "Connection error";
+  modeHelp.textContent = err.message || "Check Firebase setup and Firestore rules.";
+  modeHelp.classList.add("warning");
+}
+
+function render() {
+  renderAuth();
+  renderQueue();
+  renderCourts();
+  renderStats();
+}
+
+function renderAuth() {
+  loginPanel.classList.toggle("hidden", Boolean(currentUser));
+  playerPanel.classList.toggle("hidden", !currentUser);
+  playerStats.classList.toggle("hidden", !currentUser);
+  publicQueuePanel.classList.toggle("hidden", true);
+  publicCourtsPanel.classList.toggle("hidden", true);
+  if (!currentUser) {
+    return;
+  }
+  const name = getUserName();
+  const spot = findPlayerIndex();
+  const arrival = findArrival();
+  const onCourt = isOnCourt();
+  const canSeeQueueDetails = spot !== -1 || onCourt;
+  publicQueuePanel.classList.toggle("hidden", !canSeeQueueDetails);
+  publicCourtsPanel.classList.toggle("hidden", !canSeeQueueDetails);
+  greeting.textContent = `Hi, ${name}`;
+  imHereBtn.disabled = Boolean(arrival) || spot !== -1 || onCourt;
+  leaveBtn.disabled = spot === -1;
+  if (spot !== -1) {
+    statusText.textContent = `You are number ${spot + 1} in the queue.`;
+  } else if (arrival) {
+    statusText.textContent = "You are on the I'm Here list. A manager can add you to the queue.";
+  } else if (onCourt) {
+    statusText.textContent = "You are listed on a court right now.";
+  } else {
+    statusText.textContent = "You are not currently marked here or in the queue.";
+  }
+}
+
+function renderQueue() {
+  queueList.innerHTML = "";
+  state.queue.forEach((entry, index) => {
+    const player = normalizePlayer(entry);
+    const li = document.createElement("li");
+    if (currentUser && playerMatchesUser(player)) {
+      li.classList.add("selected");
+    }
+    li.innerHTML = `<span>${index + 1}. ${escapeHtml(player.name)}</span>
+      <span class="badge">${state.games[player.name] || 0} games</span>`;
+    queueList.appendChild(li);
+  });
+}
+
+function renderCourts() {
+  court1List.innerHTML = "";
+  court2List.innerHTML = "";
+  state.lastPlayedCourt1.forEach((entry, index) => {
+    const player = normalizePlayer(entry);
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${index + 1}. ${escapeHtml(player.name)}</span>`;
+    court1List.appendChild(li);
+  });
+  state.lastPlayedCourt2.forEach((entry, index) => {
+    const player = normalizePlayer(entry);
+    const li = document.createElement("li");
+    li.innerHTML = `<span>${index + 1}. ${escapeHtml(player.name)}</span>`;
+    court2List.appendChild(li);
+  });
+}
+
+function renderStats() {
+  const spot = findPlayerIndex();
+  statQueue.textContent = String(state.queue.length);
+  statCourts.textContent = String(state.courts);
+  statSpot.textContent = spot === -1 ? "-" : String(spot + 1);
+}
+
+async function handleSubmit() {
+  const email = playerEmail.value.trim();
+  const password = playerPassword.value;
+  const name = playerName.value.trim();
+  if (!email || !password) {
+    alert("Enter an email and password.");
+    return;
+  }
+  try {
+    if (authMode === "create") {
+      if (!name) {
+        alert("Enter your name.");
+        return;
+      }
+      await createAccount(name, email, password);
+    } else {
+      await signIn(email, password);
+    }
+    clearFields();
+  } catch (err) {
+    alert(err.message || "Sign-in failed.");
+  }
+}
+
+async function markHere() {
+  if (!currentUser || findPlayerIndex() !== -1 || findArrival() || isOnCourt()) {
+    return;
+  }
+  state.arrivals = state.arrivals || [];
+  state.arrivals.push({
+    id: createId("arrival"),
+    uid: currentUser.uid,
+    name: getUserName(),
+    arrivedAt: new Date().toISOString(),
+  });
+  await saveState(state);
+}
+
+async function leaveQueue() {
+  const index = findPlayerIndex();
+  if (index === -1) {
+    return;
+  }
+  if (!confirm("Leave the queue?")) {
+    return;
+  }
+  state.queue.splice(index, 1);
+  await saveState(state);
+}
+
+function findPlayerIndex() {
+  if (!currentUser) {
+    return -1;
+  }
+  return state.queue.findIndex((entry) => playerMatchesUser(normalizePlayer(entry)));
+}
+
+function isOnCourt() {
+  if (!currentUser) {
+    return false;
+  }
+  return [...state.lastPlayedCourt1, ...state.lastPlayedCourt2].some((entry) =>
+    playerMatchesUser(normalizePlayer(entry))
+  );
+}
+
+function findArrival() {
+  if (!currentUser) {
+    return null;
+  }
+  return (state.arrivals || []).find((arrival) =>
+    playerMatchesUser({ name: arrival.name, uid: arrival.uid || null })
+  );
+}
+
+function playerMatchesUser(player) {
+  return player.uid
+    ? player.uid === currentUser.uid
+    : player.name.toLowerCase() === getUserName().toLowerCase();
+}
+
+function normalizePlayer(entry) {
+  if (typeof entry === "string") {
+    return { name: entry, uid: null };
+  }
+  return { name: entry?.name || "", uid: entry?.uid || null };
+}
+
+function getUserName() {
+  return currentUser.displayName || currentUser.email?.split("@")[0] || "Player";
+}
+
+function setAuthMode(mode) {
+  authMode = mode;
+  playerName.classList.toggle("hidden", mode !== "create");
+  submitBtn.textContent = mode === "create" ? "Create User" : "Sign In";
+  modeHelp.textContent =
+    mode === "create"
+      ? "Enter your name, email, and password, then press Create User."
+      : "Enter your email and password, then press Sign In.";
+  signinTab.classList.toggle("active", mode === "signin");
+  createTab.classList.toggle("active", mode === "create");
+}
+
+function clearFields() {
+  playerName.value = "";
+  playerEmail.value = "";
+  playerPassword.value = "";
+}
+
+function createId(prefix) {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pickup Queue Display</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="display">
+    <div class="display-shell">
+      <header>
+        <h1>Next Game</h1>
+      </header>
+      <main class="display-grid">
+        <section class="display-court">
+          <h2>Court 1 (This Room)</h2>
+          <ul id="display-court1" class="display-list"></ul>
+        </section>
+        <section class="display-court">
+          <h2>Court 2 (Other Room)</h2>
+          <ul id="display-court2" class="display-list"></ul>
+        </section>
+        <section class="display-queue">
+          <h2>Next Players In Line</h2>
+          <div class="display-queue-columns">
+            <ol id="display-queue-left" class="display-queue-list"></ol>
+            <ol id="display-queue-right" class="display-queue-list"></ol>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="display.js"></script>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /pickupQueues/main {
+      allow read: if request.auth != null;
+
+      // This keeps the current single-document queue working while requiring login.
+      // Before broad public use, move player queue entries into per-player documents
+      // or use Cloud Functions so rules can enforce "players only edit themselves".
+      allow write: if request.auth != null;
+    }
+  }
+}

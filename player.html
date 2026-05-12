@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pickup Queue Player</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <div class="app player-app">
+      <header class="hero player-hero">
+        <div>
+          <p class="eyebrow">Player Queue</p>
+          <h1>Check the line and manage your spot.</h1>
+          <p class="subhead">
+            Sign in, mark that you are here, and leave the queue if your plans change.
+          </p>
+        </div>
+        <div id="player-stats" class="stats hidden">
+          <div class="stat-card">
+            <span class="stat-label">Players In Queue</span>
+            <span id="player-stat-queue" class="stat-value">0</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Courts Running</span>
+            <span id="player-stat-courts" class="stat-value">1</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Your Spot</span>
+            <span id="player-stat-spot" class="stat-value">-</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="player-layout">
+        <section id="player-login" class="panel auth-card">
+          <div class="panel-header">
+            <h2>Player Login</h2>
+            <span id="player-store-status" class="badge">Connecting</span>
+          </div>
+          <p id="script-warning" class="warning">
+            The app has not started yet. If you opened this file directly, use
+            `Start App.bat` or publish the `docs` folder so Firebase login can run.
+          </p>
+          <div class="auth-tabs" role="tablist" aria-label="Player account options">
+            <button id="player-signin-tab" class="tab active" type="button">Sign In</button>
+            <button id="player-create-tab" class="tab" type="button">Create User</button>
+          </div>
+          <p id="player-mode-help" class="muted"></p>
+          <div class="field-stack">
+            <input id="player-name" type="text" placeholder="Name" autocomplete="name" />
+            <input id="player-email" type="email" placeholder="Email" autocomplete="email" />
+            <input
+              id="player-password"
+              type="password"
+              placeholder="Password"
+              autocomplete="current-password"
+            />
+            <button id="player-submit-btn" class="primary">Sign In</button>
+          </div>
+        </section>
+
+        <section id="player-panel" class="panel hidden">
+          <div class="panel-header">
+            <div>
+              <h2 id="player-greeting">You are signed in</h2>
+              <p id="player-status" class="muted"></p>
+            </div>
+            <button id="player-signout-btn" class="ghost compact">Sign Out</button>
+          </div>
+          <div class="player-actions">
+            <button id="im-here-btn" class="primary">I'm Here</button>
+            <button id="leave-queue-btn" class="danger">Leave Queue</button>
+          </div>
+        </section>
+
+        <section id="public-courts-panel" class="panel hidden">
+          <div class="panel-header">
+            <h2>On Courts</h2>
+          </div>
+          <div class="courts">
+            <div>
+              <h3>Court 1</h3>
+              <ul id="public-court1-list" class="list" aria-label="Court 1"></ul>
+            </div>
+            <div>
+              <h3>Court 2</h3>
+              <ul id="public-court2-list" class="list" aria-label="Court 2"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="public-queue-panel" class="panel hidden">
+          <div class="panel-header">
+            <h2>Current Queue</h2>
+            <a class="ghost link-button compact" href="index.html">Manager Login</a>
+          </div>
+          <ol id="public-queue-list" class="public-list"></ol>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="player.js"></script>
+  </body>
+</html>
