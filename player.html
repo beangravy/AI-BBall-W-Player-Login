@@ -41,7 +41,7 @@
           </div>
           <p id="script-warning" class="warning">
             The app has not started yet. If you opened this file directly, use
-            `Start App.bat` or publish the `docs` folder so Firebase login can run.
+            `Start App.bat` or publish the app through Firebase Hosting so login can run.
           </p>
           <div class="auth-tabs" role="tablist" aria-label="Player account options">
             <button id="player-signin-tab" class="tab active" type="button">Sign In</button>
@@ -49,7 +49,18 @@
           </div>
           <p id="player-mode-help" class="muted"></p>
           <div class="field-stack">
-            <input id="player-name" type="text" placeholder="Name" autocomplete="name" />
+            <input
+              id="player-first-name"
+              type="text"
+              placeholder="First name"
+              autocomplete="given-name"
+            />
+            <input
+              id="player-last-name"
+              type="text"
+              placeholder="Last name"
+              autocomplete="family-name"
+            />
             <input id="player-email" type="email" placeholder="Email" autocomplete="email" />
             <input
               id="player-password"

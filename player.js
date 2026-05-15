@@ -1,12 +1,13 @@
 import {
-  createAccount,
+  createPlayerAccount,
   defaultState,
   getStoreMode,
   initStore,
+  markPlayerHere,
   normalizeState,
   onAuthChange,
   onStateChange,
-  saveState,
+  removePlayerFromQueue,
   signIn,
   signOutUser,
 } from "./queue-store.js";
@@ -14,6 +15,7 @@ import {
 let state = defaultState();
 let currentUser = null;
 let authMode = "signin";
+let hasLoadedState = false;
 
 const loginPanel = document.getElementById("player-login");
 const playerPanel = document.getElementById("player-panel");
@@ -22,7 +24,8 @@ const publicQueuePanel = document.getElementById("public-queue-panel");
 const publicCourtsPanel = document.getElementById("public-courts-panel");
 const storeStatus = document.getElementById("player-store-status");
 const modeHelp = document.getElementById("player-mode-help");
-const playerName = document.getElementById("player-name");
+const playerFirstName = document.getElementById("player-first-name");
+const playerLastName = document.getElementById("player-last-name");
 const playerEmail = document.getElementById("player-email");
 const playerPassword = document.getElementById("player-password");
 const submitBtn = document.getElementById("player-submit-btn");
@@ -59,11 +62,12 @@ try {
   storeStatus.textContent =
     getStoreMode() === "firebase" ? "Live queue" : "Setup mode";
   onAuthChange((user) => {
-    currentUser = user;
+    currentUser = mergeAuthUser(user);
     render();
   });
   onStateChange((nextState) => {
     state = normalizeState(nextState);
+    hasLoadedState = true;
     render();
   });
 } catch (err) {
@@ -96,8 +100,8 @@ function renderAuth() {
   publicQueuePanel.classList.toggle("hidden", !canSeeQueueDetails);
   publicCourtsPanel.classList.toggle("hidden", !canSeeQueueDetails);
   greeting.textContent = `Hi, ${name}`;
-  imHereBtn.disabled = Boolean(arrival) || spot !== -1 || onCourt;
-  leaveBtn.disabled = spot === -1;
+  imHereBtn.disabled = !hasLoadedState || Boolean(arrival) || spot !== -1 || onCourt;
+  leaveBtn.disabled = !hasLoadedState || spot === -1;
   if (spot !== -1) {
     statusText.textContent = `You are number ${spot + 1} in the queue.`;
   } else if (arrival) {
@@ -150,18 +154,22 @@ function renderStats() {
 async function handleSubmit() {
   const email = playerEmail.value.trim();
   const password = playerPassword.value;
-  const name = playerName.value.trim();
+  const firstName = playerFirstName.value.trim();
+  const lastName = playerLastName.value.trim();
+  const name = `${firstName} ${lastName}`.trim();
   if (!email || !password) {
     alert("Enter an email and password.");
     return;
   }
   try {
     if (authMode === "create") {
-      if (!name) {
-        alert("Enter your name.");
+      if (!firstName || !lastName) {
+        alert("Enter your first and last name.");
         return;
       }
-      await createAccount(name, email, password);
+      const user = await createPlayerAccount(firstName, lastName, email, password);
+      currentUser = { ...user, displayName: name };
+      render();
     } else {
       await signIn(email, password);
     }
@@ -175,14 +183,9 @@ async function markHere() {
   if (!currentUser || findPlayerIndex() !== -1 || findArrival() || isOnCourt()) {
     return;
   }
-  state.arrivals = state.arrivals || [];
-  state.arrivals.push({
-    id: createId("arrival"),
-    uid: currentUser.uid,
-    name: getUserName(),
-    arrivedAt: new Date().toISOString(),
-  });
-  await saveState(state);
+  const result = await markPlayerHere(currentUser, getUserName());
+  state = normalizeState(result.state);
+  render();
 }
 
 async function leaveQueue() {
@@ -193,8 +196,9 @@ async function leaveQueue() {
   if (!confirm("Leave the queue?")) {
     return;
   }
-  state.queue.splice(index, 1);
-  await saveState(state);
+  const result = await removePlayerFromQueue(currentUser, getUserName());
+  state = normalizeState(result.state);
+  render();
 }
 
 function findPlayerIndex() {
@@ -239,28 +243,36 @@ function getUserName() {
   return currentUser.displayName || currentUser.email?.split("@")[0] || "Player";
 }
 
+function mergeAuthUser(user) {
+  if (
+    user &&
+    currentUser?.uid === user.uid &&
+    currentUser.displayName &&
+    !user.displayName
+  ) {
+    return { ...user, displayName: currentUser.displayName };
+  }
+  return user;
+}
+
 function setAuthMode(mode) {
   authMode = mode;
-  playerName.classList.toggle("hidden", mode !== "create");
+  playerFirstName.classList.toggle("hidden", mode !== "create");
+  playerLastName.classList.toggle("hidden", mode !== "create");
   submitBtn.textContent = mode === "create" ? "Create User" : "Sign In";
   modeHelp.textContent =
     mode === "create"
-      ? "Enter your name, email, and password, then press Create User."
+      ? "Enter your first name, last name, email, and password, then press Create User."
       : "Enter your email and password, then press Sign In.";
   signinTab.classList.toggle("active", mode === "signin");
   createTab.classList.toggle("active", mode === "create");
 }
 
 function clearFields() {
-  playerName.value = "";
+  playerFirstName.value = "";
+  playerLastName.value = "";
   playerEmail.value = "";
   playerPassword.value = "";
-}
-
-function createId(prefix) {
-  return `${prefix}_${Date.now().toString(36)}_${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
 }
 
 function escapeHtml(text) {

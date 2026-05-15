@@ -141,10 +141,11 @@ function renderArrivals() {
   arrivalsList.innerHTML = "";
   const arrivals = state.arrivals || [];
   arrivalsCount.textContent = `${arrivals.length} here`;
-  arrivals.forEach((arrival) => {
+  arrivals.forEach((arrival, index) => {
+    const arrivalKey = getArrivalSelectionKey(arrival, index);
     const li = document.createElement("li");
-    li.dataset.id = arrival.id;
-    if ((state.selectedArrivalIds || []).includes(arrival.id)) {
+    li.dataset.id = arrivalKey;
+    if ((state.selectedArrivalIds || []).includes(arrivalKey)) {
       li.classList.add("selected");
     }
     const arrivedAt = arrival.arrivedAt ? new Date(arrival.arrivedAt) : null;
@@ -153,7 +154,7 @@ function renderArrivals() {
       : "Here";
     li.innerHTML = `<span>${escapeHtml(arrival.name)}</span>
       <span class="badge">${escapeHtml(timeLabel)}</span>`;
-    li.addEventListener("click", () => toggleArrivalSelection(arrival.id));
+    li.addEventListener("click", () => toggleArrivalSelection(arrivalKey));
     arrivalsList.appendChild(li);
   });
 }
@@ -564,15 +565,26 @@ function addSelectedArrivals() {
   if (!selectedIds.length) {
     return;
   }
-  const selectedArrivals = (state.arrivals || []).filter((arrival) =>
-    selectedIds.includes(arrival.id)
+  const selectedArrivals = (state.arrivals || []).filter((arrival, index) =>
+    selectedIds.includes(getArrivalSelectionKey(arrival, index))
   );
-  const added = addArrivalEntriesToQueue(selectedArrivals);
+  addArrivalsToQueue(selectedArrivals);
+}
+
+function addArrivalsToQueue(arrivals) {
+  if (!arrivals.length) {
+    return;
+  }
+  const added = addArrivalEntriesToQueue(arrivals);
   if (!added.length) {
     return;
   }
-  const addedIds = new Set(added.map((arrival) => arrival.id));
-  state.arrivals = state.arrivals.filter((arrival) => !addedIds.has(arrival.id));
+  const addedKeys = new Set(
+    added.map((arrival, index) => getArrivalSelectionKey(arrival, index))
+  );
+  state.arrivals = state.arrivals.filter(
+    (arrival, index) => !addedKeys.has(getArrivalSelectionKey(arrival, index))
+  );
   state.selectedArrivalIds = [];
   persistAndRender();
 }
@@ -584,6 +596,7 @@ function addArrivalEntriesToQueue(arrivals) {
     ...state.lastPlayedCourt2.map((entry) => getPlayerKey(normalizePlayer(entry))),
   ]);
   const added = [];
+  const playersToAdd = [];
   const skipped = [];
   arrivals.forEach((arrival) => {
     const key = getPlayerKey(arrival);
@@ -599,12 +612,15 @@ function addArrivalEntriesToQueue(arrivals) {
     if (!state.games[player.name]) {
       state.games[player.name] = 0;
     }
-    const insertAt = getInsertIndex();
-    state.queue.splice(insertAt, 0, player);
-    state.addedSincePlay.push(player.name);
+    playersToAdd.push(player);
     existingKeys.add(key);
     added.push(arrival);
   });
+  if (playersToAdd.length) {
+    const insertAt = getInsertIndex();
+    state.queue.splice(insertAt, 0, ...playersToAdd);
+    state.addedSincePlay.push(...playersToAdd.map((player) => player.name));
+  }
   if (skipped.length) {
     alert(`Already in the queue or on court:\n${skipped.join(", ")}`);
   }
@@ -621,7 +637,7 @@ function removeSelectedArrivals() {
     return;
   }
   state.arrivals = (state.arrivals || []).filter(
-    (arrival) => !selectedIds.includes(arrival.id)
+    (arrival, index) => !selectedIds.includes(getArrivalSelectionKey(arrival, index))
   );
   state.selectedArrivalIds = [];
   persistAndRender();
@@ -723,6 +739,16 @@ function normalizePlayer(entry) {
 
 function getPlayerKey(player) {
   return player.uid ? `uid:${player.uid}` : `name:${player.name.toLowerCase()}`;
+}
+
+function getArrivalSelectionKey(arrival, index) {
+  if (arrival.id) {
+    return `id:${arrival.id}`;
+  }
+  if (arrival.uid) {
+    return `uid:${arrival.uid}`;
+  }
+  return `name:${arrival.name || ""}:${arrival.arrivedAt || ""}`;
 }
 
 function renamePlayerEntry(entry, newName, oldName = null) {

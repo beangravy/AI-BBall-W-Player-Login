@@ -349,8 +349,13 @@ button:disabled {
 }
 
 .file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
+  font: inherit;
+  line-height: normal;
 }
 
 .file-btn input {

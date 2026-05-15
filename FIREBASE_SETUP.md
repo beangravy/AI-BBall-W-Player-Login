@@ -10,9 +10,11 @@ This app uses Firebase Authentication for manager/player login and Firestore for
    - Email/password
 4. Create a Firestore database.
 
-## 2. Fill in `firebase-config.js`
+## 2. Add local Firebase config
 
-Paste the Firebase Web app config into `firebaseConfig`.
+Do not put your real Firebase key in `firebase-config.js`. That file is a safe checked-in placeholder.
+
+For local testing, copy `firebase-config.local.example.js` to `firebase-config.local.js`, then paste the Firebase Web app config into `firebaseConfig`. The local file is ignored by git.
 
 Add manager emails to `managerEmails`. Only these emails can open `index.html` when Firebase is configured.
 
@@ -50,7 +52,6 @@ Do not double-click `index.html` directly. The app uses browser modules and Fire
 From the project root, double-click `Start App.bat`, or run:
 
 ```powershell
-cd web
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
