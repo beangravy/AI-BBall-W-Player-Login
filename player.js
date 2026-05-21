@@ -16,6 +16,7 @@ let state = defaultState();
 let currentUser = null;
 let authMode = "signin";
 let hasLoadedState = false;
+let unsubscribeState = null;
 
 const loginPanel = document.getElementById("player-login");
 const playerPanel = document.getElementById("player-panel");
@@ -63,13 +64,12 @@ try {
     getStoreMode() === "firebase" ? "Live queue" : "Setup mode";
   onAuthChange((user) => {
     currentUser = mergeAuthUser(user);
+    syncStateSubscription();
     render();
   });
-  onStateChange((nextState) => {
-    state = normalizeState(nextState);
-    hasLoadedState = true;
-    render();
-  });
+  if (getStoreMode() === "local") {
+    syncStateSubscription();
+  }
 } catch (err) {
   storeStatus.textContent = "Connection error";
   modeHelp.textContent = err.message || "Check Firebase setup and Firestore rules.";
@@ -146,9 +146,29 @@ function renderCourts() {
 
 function renderStats() {
   const spot = findPlayerIndex();
-  statQueue.textContent = String(state.queue.length);
-  statCourts.textContent = String(state.courts);
+  statQueue.textContent = hasLoadedState ? String(state.queue.length) : "-";
+  statCourts.textContent = hasLoadedState ? String(state.courts) : "-";
   statSpot.textContent = spot === -1 ? "-" : String(spot + 1);
+}
+
+function syncStateSubscription() {
+  if (getStoreMode() === "firebase" && !currentUser) {
+    if (unsubscribeState) {
+      unsubscribeState();
+      unsubscribeState = null;
+    }
+    state = defaultState();
+    hasLoadedState = false;
+    return;
+  }
+  if (unsubscribeState) {
+    return;
+  }
+  unsubscribeState = onStateChange((nextState) => {
+    state = normalizeState(nextState);
+    hasLoadedState = true;
+    render();
+  });
 }
 
 async function handleSubmit() {
