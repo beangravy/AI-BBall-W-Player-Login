@@ -80,6 +80,22 @@
             </div>
             <button id="player-signout-btn" class="ghost compact">Sign Out</button>
           </div>
+          <div class="notice">
+            <p>
+              Please don't mark yourself as "I'm Here" until you are in the building.
+              This is not meant as a shortcut to get in line; you still need to be
+              added to the official list. If we don't see you, we won't add you, and
+              it may cause you to be added even lower on the list.
+            </p>
+            <p>
+              When you play, it is assumed you signed the waiver. Go to
+              <a href="https://woodsidebible.org/events" target="_blank" rel="noopener">
+                woodsidebible.org/events
+              </a>
+              and search for basketball. Registering for the next
+              Basketball-Men-Troy event will let you sign the waiver.
+            </p>
+          </div>
           <div class="player-actions">
             <button id="im-here-btn" class="primary">I'm Here</button>
             <button id="leave-queue-btn" class="danger">Leave Queue</button>
@@ -88,7 +104,10 @@
 
         <section id="public-courts-panel" class="panel hidden">
           <div class="panel-header">
-            <h2>On Courts</h2>
+            <div>
+              <h2>On Courts</h2>
+              <p id="player-next-game-updated" class="muted compact-meta"></p>
+            </div>
           </div>
           <div class="courts">
             <div>

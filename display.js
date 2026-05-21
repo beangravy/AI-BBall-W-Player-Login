@@ -1,20 +1,44 @@
-import { initStore, normalizeState, onStateChange } from "./queue-store.js";
+import {
+  getStoreMode,
+  initStore,
+  normalizeState,
+  onAuthChange,
+  onStateChange,
+} from "./queue-store.js";
 
 const court1List = document.getElementById("display-court1");
 const court2List = document.getElementById("display-court2");
 const queueLeft = document.getElementById("display-queue-left");
 const queueRight = document.getElementById("display-queue-right");
+const nextGameUpdated = document.getElementById("display-next-game-updated");
+let unsubscribeState = null;
 
 await initStore();
-onStateChange((nextState) => {
-  render(normalizeState(nextState));
-});
+if (getStoreMode() === "local") {
+  syncStateSubscription();
+} else {
+  onAuthChange((user) => {
+    if (user) {
+      syncStateSubscription();
+    }
+  });
+}
+
+function syncStateSubscription() {
+  if (unsubscribeState) {
+    return;
+  }
+  unsubscribeState = onStateChange((nextState) => {
+    render(normalizeState(nextState));
+  });
+}
 
 function render(state) {
   court1List.innerHTML = "";
   court2List.innerHTML = "";
   queueLeft.innerHTML = "";
   queueRight.innerHTML = "";
+  nextGameUpdated.textContent = formatUpdatedAt(state.nextGameUpdatedAt);
 
   state.lastPlayedCourt1.forEach((entry) => {
     const li = document.createElement("li");
@@ -46,4 +70,18 @@ function normalizePlayer(entry) {
     return { name: entry, uid: null };
   }
   return { name: entry?.name || "", uid: entry?.uid || null };
+}
+
+function formatUpdatedAt(value) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return `Updated ${date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 }

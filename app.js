@@ -15,6 +15,7 @@ import {
 let state = defaultState();
 let currentUser = null;
 let authMode = "signin";
+let unsubscribeState = null;
 
 const managerLogin = document.getElementById("manager-login");
 const managerApp = document.getElementById("manager-app");
@@ -37,6 +38,7 @@ const statQueue = document.getElementById("stat-queue");
 const statCourts = document.getElementById("stat-courts");
 const statLastPlay = document.getElementById("stat-last-play");
 const statAttended = document.getElementById("stat-attended");
+const managerNextGameUpdated = document.getElementById("manager-next-game-updated");
 
 document.getElementById("manager-signout-btn").addEventListener("click", handleSignOut);
 managerSubmitBtn.addEventListener("click", handleManagerSubmit);
@@ -96,12 +98,12 @@ try {
   renderStoreNotice();
   onAuthChange((user) => {
     currentUser = user;
+    syncStateSubscription();
     renderAuthGate();
   });
-  onStateChange((nextState) => {
-    state = normalizeState(nextState);
-    render();
-  });
+  if (getStoreMode() === "local") {
+    syncStateSubscription();
+  }
 } catch (err) {
   managerStatus.textContent = "The app could not connect to Firebase.";
   managerNotice.textContent = err.message || "Check Firebase setup and Firestore rules.";
@@ -136,7 +138,27 @@ function render() {
   renderQueue();
   renderCourts();
   updateStats();
+  updateNextGameTimestamp();
   syncControls();
+}
+
+function syncStateSubscription() {
+  const hasAccess = getStoreMode() === "local" || isManager(currentUser);
+  if (!hasAccess) {
+    if (unsubscribeState) {
+      unsubscribeState();
+      unsubscribeState = null;
+    }
+    state = defaultState();
+    return;
+  }
+  if (unsubscribeState) {
+    return;
+  }
+  unsubscribeState = onStateChange((nextState) => {
+    state = normalizeState(nextState);
+    render();
+  });
 }
 
 function renderArrivals() {
@@ -342,6 +364,7 @@ function clearQueue() {
     state.selectedIndices = [];
     state.lastPlayedCourt1 = [];
     state.lastPlayedCourt2 = [];
+    state.nextGameUpdatedAt = null;
     state.undoSnapshot = null;
     state.addedSincePlay = [];
     state.pendingAfterPlay = [];
@@ -477,6 +500,7 @@ function playSelected() {
     state.lastPlayedCourt1 = [...selected];
     state.lastPlayedCourt2 = [];
   }
+  markNextGameUpdated();
   state.selectedIndices = [];
   persistAndRender();
 }
@@ -501,8 +525,10 @@ function undoPlay() {
     state.queue = [...state.undoSnapshot.queue];
   }
   state.games = { ...state.undoSnapshot.games };
-  state.lastPlayedCourt1 = [...state.undoSnapshot.court1];
-  state.lastPlayedCourt2 = [...state.undoSnapshot.court2];
+  state.lastPlayedCourt1 = [];
+  state.lastPlayedCourt2 = [];
+  state.nextGameUpdatedAt = null;
+  state.courtSelections = { court1: null, court2: null };
   state.undoSnapshot = null;
   state.addedSincePlay = [];
   state.selectedIndices = [];
@@ -522,6 +548,7 @@ function swapSelected() {
   const temp = state.lastPlayedCourt1[idx1];
   state.lastPlayedCourt1[idx1] = state.lastPlayedCourt2[idx2];
   state.lastPlayedCourt2[idx2] = temp;
+  markNextGameUpdated();
   persistAndRender();
 }
 
@@ -794,6 +821,28 @@ function renameAttendedPlayer(oldPlayer, newName) {
 
 function getAttendedCount() {
   return Object.keys(state.attendedPlayers || {}).length;
+}
+
+function markNextGameUpdated() {
+  state.nextGameUpdatedAt = new Date().toISOString();
+}
+
+function updateNextGameTimestamp() {
+  managerNextGameUpdated.textContent = formatUpdatedAt(state.nextGameUpdatedAt);
+}
+
+function formatUpdatedAt(value) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return `Updated ${date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 }
 
 function getArrivalSelectionKey(arrival, index) {

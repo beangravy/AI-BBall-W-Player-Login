@@ -42,6 +42,7 @@ const court2List = document.getElementById("public-court2-list");
 const statQueue = document.getElementById("player-stat-queue");
 const statCourts = document.getElementById("player-stat-courts");
 const statSpot = document.getElementById("player-stat-spot");
+const nextGameUpdated = document.getElementById("player-next-game-updated");
 
 signinTab.addEventListener("click", () => setAuthMode("signin"));
 createTab.addEventListener("click", () => setAuthMode("create"));
@@ -130,6 +131,7 @@ function renderQueue() {
 function renderCourts() {
   court1List.innerHTML = "";
   court2List.innerHTML = "";
+  nextGameUpdated.textContent = formatUpdatedAt(state.nextGameUpdatedAt);
   state.lastPlayedCourt1.forEach((entry, index) => {
     const player = normalizePlayer(entry);
     const li = document.createElement("li");
@@ -299,4 +301,18 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+function formatUpdatedAt(value) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return `Updated ${date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
 }

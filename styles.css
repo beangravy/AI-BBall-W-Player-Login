@@ -261,6 +261,11 @@ input[type="password"] {
   font-size: 0.95rem;
 }
 
+.compact-meta {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
 .warning {
   background: rgba(182, 41, 26, 0.08);
   border: 1px solid rgba(182, 41, 26, 0.24);
@@ -269,6 +274,30 @@ input[type="password"] {
   padding: 10px 12px;
   margin: 0 0 12px;
   font-size: 0.95rem;
+}
+
+.notice {
+  background: rgba(44, 77, 107, 0.08);
+  border: 1px solid rgba(44, 77, 107, 0.18);
+  border-radius: 12px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  margin: 0 0 14px;
+  padding: 12px;
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice p + p {
+  margin-top: 8px;
+}
+
+.notice a {
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .mini-queue {
@@ -496,6 +525,16 @@ button:disabled {
   font-size: clamp(1.6rem, 2.2vw, 2.4rem);
   margin: 0 0 12px;
   line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.display-updated {
+  color: rgba(247, 244, 239, 0.72);
+  font-size: clamp(0.95rem, 1.4vw, 1.35rem);
+  font-weight: 400;
 }
 
 .display-grid {

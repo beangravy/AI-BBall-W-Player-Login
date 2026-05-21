@@ -23,6 +23,7 @@ export function defaultState() {
     selectedIndices: [],
     lastPlayedCourt1: [],
     lastPlayedCourt2: [],
+    nextGameUpdatedAt: null,
     undoSnapshot: null,
     addedSincePlay: [],
     pendingAfterPlay: [],
