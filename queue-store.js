@@ -34,11 +34,14 @@ export function defaultState() {
     arrivals: [],
     selectedArrivalIds: [],
     registeredPlayers: {},
+    attendedPlayers: {},
   };
 }
 
 export function normalizeState(data) {
-  return { ...defaultState(), ...(data || {}) };
+  const state = { ...defaultState(), ...(data || {}) };
+  state.attendedPlayers = seedAttendedPlayers(state);
+  return state;
 }
 
 export async function initStore() {
@@ -318,6 +321,7 @@ function addArrival(state, user, name) {
   }
 
   state.arrivals = state.arrivals || [];
+  markPlayerAttended(state, { uid: user.uid, name });
   state.arrivals.push({
     id: createId("arrival"),
     uid: user.uid,
@@ -325,6 +329,43 @@ function addArrival(state, user, name) {
     arrivedAt: new Date().toISOString(),
   });
   return { changed: true };
+}
+
+function markPlayerAttended(state, player) {
+  const normalized = normalizePlayer(player);
+  if (!normalized.name) {
+    return;
+  }
+  state.attendedPlayers = state.attendedPlayers || {};
+  const key = getPlayerKey(normalized);
+  state.attendedPlayers[key] = {
+    uid: normalized.uid || null,
+    name: normalized.name,
+    firstSeenAt: state.attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+  };
+}
+
+function seedAttendedPlayers(state) {
+  const attendedPlayers = { ...(state.attendedPlayers || {}) };
+  [
+    ...Object.keys(state.games || {}).map((name) => ({ name, uid: null })),
+    ...(state.queue || []),
+    ...(state.lastPlayedCourt1 || []),
+    ...(state.lastPlayedCourt2 || []),
+    ...(state.arrivals || []),
+  ].forEach((entry) => {
+    const player = normalizePlayer(entry);
+    if (!player.name) {
+      return;
+    }
+    const key = getPlayerKey(player);
+    attendedPlayers[key] = {
+      uid: player.uid || null,
+      name: player.name,
+      firstSeenAt: attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+    };
+  });
+  return attendedPlayers;
 }
 
 function removeQueuedPlayer(state, user, name) {
@@ -390,6 +431,10 @@ function normalizePlayer(entry) {
     return { name: entry, uid: null };
   }
   return { name: entry?.name || "", uid: entry?.uid || null };
+}
+
+function getPlayerKey(player) {
+  return player.uid ? `uid:${player.uid}` : `name:${player.name.toLowerCase()}`;
 }
 
 function formatFullName(firstName, lastName) {

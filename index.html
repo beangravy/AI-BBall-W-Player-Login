@@ -31,6 +31,10 @@
             <span class="stat-label">Last Play</span>
             <span id="stat-last-play" class="stat-value">0</span>
           </div>
+          <div class="stat-card">
+            <span class="stat-label">Total Attended</span>
+            <span id="stat-attended" class="stat-value">0</span>
+          </div>
         </div>
       </header>
 
@@ -152,6 +156,9 @@
             </div>
             <ul id="arrivals-list" class="list" aria-label="Players who are here"></ul>
             <div class="queue-actions arrivals-actions">
+              <button id="add-all-arrivals-btn" class="primary" data-lockable="true">
+                Add All
+              </button>
               <button id="add-arrivals-btn" class="primary" data-lockable="true">
                 Add Selected To Queue
               </button>

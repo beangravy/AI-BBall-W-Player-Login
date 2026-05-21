@@ -36,6 +36,7 @@ const playerInput = document.getElementById("player-input");
 const statQueue = document.getElementById("stat-queue");
 const statCourts = document.getElementById("stat-courts");
 const statLastPlay = document.getElementById("stat-last-play");
+const statAttended = document.getElementById("stat-attended");
 
 document.getElementById("manager-signout-btn").addEventListener("click", handleSignOut);
 managerSubmitBtn.addEventListener("click", handleManagerSubmit);
@@ -50,6 +51,7 @@ document.getElementById("swap-btn").addEventListener("click", swapSelected);
 document.getElementById("clear-selection-btn").addEventListener("click", clearSelection);
 document.getElementById("remove-btn").addEventListener("click", removeSelected);
 document.getElementById("rename-btn").addEventListener("click", renameSelected);
+document.getElementById("add-all-arrivals-btn").addEventListener("click", addAllArrivals);
 document.getElementById("add-arrivals-btn").addEventListener("click", addSelectedArrivals);
 document.getElementById("remove-arrivals-btn").addEventListener("click", removeSelectedArrivals);
 document.getElementById("lock-btn").addEventListener("click", lockControls);
@@ -249,6 +251,7 @@ function updateStats() {
   statCourts.textContent = String(state.courts);
   const lastPlayCount = state.lastPlayedCourt1.length + state.lastPlayedCourt2.length;
   statLastPlay.textContent = String(lastPlayCount);
+  statAttended.textContent = String(getAttendedCount());
   document.querySelectorAll('input[name="courts"]').forEach((radio) => {
     radio.checked = Number(radio.value) === state.courts;
   });
@@ -321,6 +324,7 @@ function addNamesToQueue(names) {
       state.games[name] = 0;
     }
   });
+  markPlayersAttended(uniqueNames);
   state.addedSincePlay.push(...uniqueNames);
   const insertAt = getInsertIndex();
   state.queue.splice(insertAt, 0, ...uniqueNames);
@@ -344,6 +348,7 @@ function clearQueue() {
     state.courtSelections = { court1: null, court2: null };
     state.arrivals = [];
     state.selectedArrivalIds = [];
+    state.attendedPlayers = {};
     persistAndRender();
   }
 }
@@ -385,7 +390,8 @@ function renameSelected() {
     return;
   }
   const idx = state.selectedIndices[0];
-  const oldName = normalizePlayer(state.queue[idx]).name;
+  const oldPlayer = normalizePlayer(state.queue[idx]);
+  const oldName = oldPlayer.name;
   const newName = prompt(`Edit name for: ${oldName}`, oldName);
   if (newName === null) {
     return;
@@ -403,6 +409,7 @@ function renameSelected() {
     state.games[trimmed] = state.games[oldName];
     delete state.games[oldName];
   }
+  renameAttendedPlayer(oldPlayer, trimmed);
   state.lastPlayedCourt1 = state.lastPlayedCourt1.map((entry) =>
     renamePlayerEntry(entry, trimmed, oldName)
   );
@@ -571,6 +578,14 @@ function addSelectedArrivals() {
   addArrivalsToQueue(selectedArrivals);
 }
 
+function addAllArrivals() {
+  if (state.locked) {
+    alert("Unlock to add players from the I'm Here list.");
+    return;
+  }
+  addArrivalsToQueue(state.arrivals || []);
+}
+
 function addArrivalsToQueue(arrivals) {
   if (!arrivals.length) {
     return;
@@ -617,6 +632,7 @@ function addArrivalEntriesToQueue(arrivals) {
     added.push(arrival);
   });
   if (playersToAdd.length) {
+    markPlayersAttended(playersToAdd);
     const insertAt = getInsertIndex();
     state.queue.splice(insertAt, 0, ...playersToAdd);
     state.addedSincePlay.push(...playersToAdd.map((player) => player.name));
@@ -739,6 +755,45 @@ function normalizePlayer(entry) {
 
 function getPlayerKey(player) {
   return player.uid ? `uid:${player.uid}` : `name:${player.name.toLowerCase()}`;
+}
+
+function markPlayersAttended(players) {
+  state.attendedPlayers = state.attendedPlayers || {};
+  players.forEach((entry) => {
+    const player = normalizePlayer(entry);
+    if (!player.name) {
+      return;
+    }
+    const key = getPlayerKey(player);
+    state.attendedPlayers[key] = {
+      uid: player.uid || null,
+      name: player.name,
+      firstSeenAt: state.attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+    };
+  });
+}
+
+function renameAttendedPlayer(oldPlayer, newName) {
+  state.attendedPlayers = state.attendedPlayers || {};
+  const oldKey = getPlayerKey(oldPlayer);
+  if (!state.attendedPlayers[oldKey]) {
+    markPlayersAttended([{ ...oldPlayer, name: newName }]);
+    return;
+  }
+  const updatedPlayer = { ...oldPlayer, name: newName };
+  const newKey = getPlayerKey(updatedPlayer);
+  state.attendedPlayers[newKey] = {
+    ...state.attendedPlayers[oldKey],
+    uid: oldPlayer.uid || null,
+    name: newName,
+  };
+  if (newKey !== oldKey) {
+    delete state.attendedPlayers[oldKey];
+  }
+}
+
+function getAttendedCount() {
+  return Object.keys(state.attendedPlayers || {}).length;
 }
 
 function getArrivalSelectionKey(arrival, index) {
