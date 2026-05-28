@@ -339,16 +339,26 @@ function markPlayerAttended(state, player) {
   }
   state.attendedPlayers = state.attendedPlayers || {};
   const key = getPlayerKey(normalized);
+  const nameKey = getNameKey(normalized.name);
+  const existingNameEntry = state.attendedPlayers[`name:${nameKey}`];
   state.attendedPlayers[key] = {
     uid: normalized.uid || null,
     name: normalized.name,
-    firstSeenAt: state.attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+    firstSeenAt:
+      state.attendedPlayers[key]?.firstSeenAt ||
+      existingNameEntry?.firstSeenAt ||
+      new Date().toISOString(),
   };
+  if (normalized.uid) {
+    delete state.attendedPlayers[`name:${nameKey}`];
+  }
 }
 
 function seedAttendedPlayers(state) {
-  const attendedPlayers = { ...(state.attendedPlayers || {}) };
+  const attendedPlayers = {};
+  const attendedKeysByName = new Map();
   [
+    ...Object.values(state.attendedPlayers || {}),
     ...Object.keys(state.games || {}).map((name) => ({ name, uid: null })),
     ...(state.queue || []),
     ...(state.lastPlayedCourt1 || []),
@@ -359,12 +369,21 @@ function seedAttendedPlayers(state) {
     if (!player.name) {
       return;
     }
+    const nameKey = getNameKey(player.name);
     const key = getPlayerKey(player);
-    attendedPlayers[key] = {
-      uid: player.uid || null,
+    const existingKey = attendedKeysByName.get(nameKey);
+    const targetKey = player.uid || !existingKey ? key : existingKey;
+    const existing = attendedPlayers[targetKey] || attendedPlayers[existingKey] || {};
+    const nextEntry = {
+      uid: player.uid || existing.uid || null,
       name: player.name,
-      firstSeenAt: attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+      firstSeenAt: existing?.firstSeenAt || new Date().toISOString(),
     };
+    if (existingKey && targetKey !== existingKey) {
+      delete attendedPlayers[existingKey];
+    }
+    attendedPlayers[targetKey] = nextEntry;
+    attendedKeysByName.set(nameKey, targetKey);
   });
   return attendedPlayers;
 }

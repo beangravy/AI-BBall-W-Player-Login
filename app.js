@@ -792,11 +792,21 @@ function markPlayersAttended(players) {
       return;
     }
     const key = getPlayerKey(player);
-    state.attendedPlayers[key] = {
-      uid: player.uid || null,
+    const nameKey = `name:${getAttendedNameKey(player.name)}`;
+    const existingNameKey = getAttendedEntryKeyByName(player.name);
+    const targetKey = player.uid || !existingNameKey ? key : existingNameKey;
+    const existingEntry = state.attendedPlayers[targetKey] || {};
+    state.attendedPlayers[targetKey] = {
+      uid: player.uid || existingEntry.uid || null,
       name: player.name,
-      firstSeenAt: state.attendedPlayers[key]?.firstSeenAt || new Date().toISOString(),
+      firstSeenAt:
+        existingEntry?.firstSeenAt ||
+        state.attendedPlayers[nameKey]?.firstSeenAt ||
+        new Date().toISOString(),
     };
+    if (existingNameKey && targetKey !== existingNameKey) {
+      delete state.attendedPlayers[existingNameKey];
+    }
   });
 }
 
@@ -820,7 +830,26 @@ function renameAttendedPlayer(oldPlayer, newName) {
 }
 
 function getAttendedCount() {
-  return Object.keys(state.attendedPlayers || {}).length;
+  const attendedNames = new Set();
+  Object.values(state.attendedPlayers || {}).forEach((entry) => {
+    const player = normalizePlayer(entry);
+    if (player.name) {
+      attendedNames.add(getAttendedNameKey(player.name));
+    }
+  });
+  return attendedNames.size;
+}
+
+function getAttendedNameKey(name) {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getAttendedEntryKeyByName(name) {
+  const nameKey = getAttendedNameKey(name);
+  return Object.entries(state.attendedPlayers || {}).find(([, entry]) => {
+    const player = normalizePlayer(entry);
+    return player.name && getAttendedNameKey(player.name) === nameKey;
+  })?.[0];
 }
 
 function markNextGameUpdated() {

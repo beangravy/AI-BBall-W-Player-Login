@@ -135,12 +135,18 @@ function renderCourts() {
   state.lastPlayedCourt1.forEach((entry, index) => {
     const player = normalizePlayer(entry);
     const li = document.createElement("li");
+    if (currentUser && playerMatchesUser(player)) {
+      li.classList.add("selected");
+    }
     li.innerHTML = `<span>${index + 1}. ${escapeHtml(player.name)}</span>`;
     court1List.appendChild(li);
   });
   state.lastPlayedCourt2.forEach((entry, index) => {
     const player = normalizePlayer(entry);
     const li = document.createElement("li");
+    if (currentUser && playerMatchesUser(player)) {
+      li.classList.add("selected");
+    }
     li.innerHTML = `<span>${index + 1}. ${escapeHtml(player.name)}</span>`;
     court2List.appendChild(li);
   });
