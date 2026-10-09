@@ -103,7 +103,7 @@ export async function saveState(state) {
   }
 
   const { doc, setDoc } = firebaseModules.firestoreModule;
-  await setDoc(getQueueDoc(doc), cleanState, { merge: true });
+  await setDoc(getQueueDoc(doc), cleanState);
 }
 
 export async function markPlayerHere(user, name) {
@@ -127,7 +127,7 @@ export async function markPlayerHere(user, name) {
     const latestState = normalizeState(snapshot.data());
     const result = addArrival(latestState, user, name);
     if (result.changed) {
-      transaction.set(queueDoc, prepareStateForSave(latestState), { merge: true });
+      transaction.set(queueDoc, prepareStateForSave(latestState));
     }
     return { ...result, state: latestState };
   });
@@ -154,7 +154,7 @@ export async function removePlayerFromQueue(user, name) {
     const latestState = normalizeState(snapshot.data());
     const result = removeQueuedPlayer(latestState, user, name);
     if (result.changed) {
-      transaction.set(queueDoc, prepareStateForSave(latestState), { merge: true });
+      transaction.set(queueDoc, prepareStateForSave(latestState));
     }
     return { ...result, state: latestState };
   });
@@ -261,7 +261,7 @@ async function reservePlayerNameInStore(user, name) {
     const snapshot = await transaction.get(queueDoc);
     const latestState = normalizeState(snapshot.data());
     reservePlayerName(latestState, user, name);
-    transaction.set(queueDoc, prepareStateForSave(latestState), { merge: true });
+    transaction.set(queueDoc, prepareStateForSave(latestState));
   });
 }
 
