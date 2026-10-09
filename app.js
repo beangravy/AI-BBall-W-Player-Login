@@ -423,7 +423,10 @@ function renameSelected() {
   if (!trimmed) {
     return;
   }
-  if (trimmed !== oldName && state.games[trimmed]) {
+  if (
+    trimmed !== oldName &&
+    Object.prototype.hasOwnProperty.call(state.games, trimmed)
+  ) {
     alert("That name already exists.");
     return;
   }
@@ -813,19 +816,24 @@ function markPlayersAttended(players) {
 function renameAttendedPlayer(oldPlayer, newName) {
   state.attendedPlayers = state.attendedPlayers || {};
   const oldKey = getPlayerKey(oldPlayer);
-  if (!state.attendedPlayers[oldKey]) {
+  const existingOldNameKey = getAttendedEntryKeyByName(oldPlayer.name);
+  const sourceKey = state.attendedPlayers[oldKey] ? oldKey : existingOldNameKey;
+  if (!sourceKey) {
     markPlayersAttended([{ ...oldPlayer, name: newName }]);
     return;
   }
   const updatedPlayer = { ...oldPlayer, name: newName };
   const newKey = getPlayerKey(updatedPlayer);
   state.attendedPlayers[newKey] = {
-    ...state.attendedPlayers[oldKey],
+    ...state.attendedPlayers[sourceKey],
     uid: oldPlayer.uid || null,
     name: newName,
   };
-  if (newKey !== oldKey) {
-    delete state.attendedPlayers[oldKey];
+  if (newKey !== sourceKey) {
+    delete state.attendedPlayers[sourceKey];
+  }
+  if (existingOldNameKey && existingOldNameKey !== newKey) {
+    delete state.attendedPlayers[existingOldNameKey];
   }
 }
 
